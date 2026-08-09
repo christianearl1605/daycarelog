@@ -1,6 +1,6 @@
 const BASE = window.location.hostname === 'localhost'
   ? '/api'
-  : 'https://daycarelog-production.up.railway.app/api'
+  : 'https://daycarelog-production-0a50.up.railway.app/api'
 
 function getToken() {
   return localStorage.getItem('dcl_token')

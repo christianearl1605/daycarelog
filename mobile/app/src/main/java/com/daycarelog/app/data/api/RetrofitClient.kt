@@ -7,7 +7,7 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
 object RetrofitClient {
-    private const val BASE_URL = "https://daycarelog-production.up.railway.app/api/"
+    private const val BASE_URL = "https://daycarelog-production-0a50.up.railway.app/api/"
 
     private val authInterceptor = Interceptor { chain ->
         val req = chain.request().newBuilder().apply {

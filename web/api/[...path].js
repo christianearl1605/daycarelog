@@ -1,4 +1,4 @@
-const RAILWAY = 'https://daycarelog-production.up.railway.app'
+const RAILWAY = 'https://daycarelog-production-0a50.up.railway.app'
 
 export default async function handler(req, res) {
   try {
