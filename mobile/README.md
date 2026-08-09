@@ -26,6 +26,73 @@ cd mobile
 
 The app points at the production backend URL by default — see `RetrofitClient.kt` to point it at a local backend instead.
 
+### Release build
+
+```bash
+cd mobile
+./gradlew assembleRelease
+```
+
+produces a **signed, shrunk** release APK at
+`app/build/outputs/apk/release/app-release.apk` — as opposed to
+`assembleDebug`'s output at `app/build/outputs/apk/debug/app-debug.apk`,
+which is unminified, debuggable, and signed with the auto-generated debug
+keystore (fine for local development, not for handing out).
+
+**One-time setup** (already done in this checkout — `keystore/` and
+`keystore.properties` exist locally and are git-ignored, never committed):
+
+```bash
+cd mobile
+mkdir -p keystore
+keytool -genkeypair -v -keystore keystore/daycarelog-release.jks -alias daycarelog \
+  -keyalg RSA -keysize 2048 -validity 10000 -storetype PKCS12
+```
+
+Then create `mobile/keystore.properties` (git-ignored):
+
+```properties
+storeFile=keystore/daycarelog-release.jks
+storePassword=<the password you set above>
+keyAlias=daycarelog
+keyPassword=<same as storePassword - PKCS12 keystores require both to match>
+```
+
+**Back this keystore up somewhere safe outside the repo.** It's what proves
+future release builds come from the same source — lose it, and no later
+build can ever install as an "update" over an already-installed release; the
+only option would be uninstalling first.
+
+**CI / no local `keystore.properties`**: the build also reads
+`RELEASE_STORE_FILE` / `RELEASE_STORE_PASSWORD` / `RELEASE_KEY_ALIAS` /
+`RELEASE_KEY_PASSWORD` environment variables as a fallback (see
+`app/build.gradle.kts`), so a CI pipeline can decode a base64-encoded
+keystore secret to a file and export those instead of checking anything in.
+
+**Versioning**: bump both `versionCode` (must strictly increase release to
+release — Android uses it to decide if an install is an update) and
+`versionName` (the human-readable string, e.g. `1.0.0` → `1.0.1`) in
+`defaultConfig` in `app/build.gradle.kts` before cutting a new release.
+
+**After building**: verify the APK is actually signed with the release key
+(not the debug one) and test it on a device before handing it out:
+
+```bash
+$ANDROID_HOME/build-tools/<version>/apksigner verify --print-certs \
+  app/build/outputs/apk/release/app-release.apk
+adb install app/build/outputs/apk/release/app-release.apk
+```
+
+Since this release build enables R8 minification/resource shrinking
+(`isMinifyEnabled = true`, `isShrinkResources = true` — the debug build type
+is untouched and stays unminified), `app/proguard-rules.pro` keeps every
+class in `data/model/` unobfuscated: those are all plain Kotlin data classes
+deserialized by Gson via field-name reflection through Retrofit's
+converter-gson, and R8 has no way to know that on its own — without the
+keep rule it would rename/strip fields and every API response would fail to
+parse at runtime despite the build itself succeeding. If you add a new
+model class or a reflection-based library, re-check that file.
+
 ## Project structure
 
 ```
